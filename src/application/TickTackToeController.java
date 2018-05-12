@@ -44,14 +44,17 @@ public class TickTackToeController {
 	@FXML private void initialize(){	
 		producer = new PTPProducer(hash);
 		consumer = new PTPConsumer(hash, new QueueAsynchConsumer());
-		provisionGame(false);
-		/*timeForMoveLbl.setText(hash.toString());
-		outcomeLbl.setVisible(false);
-		prepareButtons();
+		buttons[0] = btn0;
+		buttons[1] = btn1;
+		buttons[2] = btn2;
+		buttons[3] = btn3;
+		buttons[4] = btn4;
+		buttons[5] = btn5;
+		buttons[6] = btn6;
+		buttons[7] = btn7;
+		buttons[8] = btn8;
 		
-		producer.sendQueueMessage("start");
-		sentTimestamp = new java.util.Date().getTime();*/
-
+		provisionGame(false);
 	}
 	
 	@FXML private void restartBtn_Click() {
@@ -107,17 +110,7 @@ public class TickTackToeController {
 		}
 	}
 	
-	private void prepareButtons() {
-		buttons[0] = btn0;
-		buttons[1] = btn1;
-		buttons[2] = btn2;
-		buttons[3] = btn3;
-		buttons[4] = btn4;
-		buttons[5] = btn5;
-		buttons[6] = btn6;
-		buttons[7] = btn7;
-		buttons[8] = btn8;
-		
+	private void prepareButtons() {		
 		for(Button b : buttons) {
 			b.setText("");
 		}
