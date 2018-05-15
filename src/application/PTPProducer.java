@@ -15,7 +15,7 @@ public class PTPProducer {
 		this.hash = hash;
 	}
 	
-	public void sendQueueMessage(String text) {
+	public void sendQueueMessage(String text,Boolean inGame) {
 		ConnectionFactory connectionFactory = new com.sun.messaging.ConnectionFactory();
 		
 		try {
@@ -26,6 +26,7 @@ public class PTPProducer {
 			message.setStringProperty("HASH", hash.toString());
 			message.setLongProperty("TIME", new java.util.Date().getTime());
 			message.setStringProperty("TEXT", text);
+			message.setBooleanProperty("INGAME", inGame);
 			
 			JMSProducer jmsProducer = jmsContext.createProducer();
 			Queue queue = new com.sun.messaging.Queue("ATJQueue");

@@ -33,6 +33,7 @@ public class TickTackToeController {
 	
 	private Integer hash = new java.util.Date().hashCode();
 	private long sentTimestamp;
+	private Boolean inGame = false;
 	
 	private String state = "waitForOtherStart"; //waitForOtherStart || myMove || hisMove || won || lost
 	private String symbol = "X";
@@ -54,11 +55,11 @@ public class TickTackToeController {
 		buttons[7] = btn7;
 		buttons[8] = btn8;
 		
-		provisionGame(false);
+		provisionGame();
 	}
 	
 	@FXML private void restartBtn_Click() {
-		producer.sendQueueMessage("restart");
+		producer.sendQueueMessage("restart",inGame);
 		restartGame();
 	}
 	
@@ -98,16 +99,19 @@ public class TickTackToeController {
 		sendMove(8);
 	}
 	
-	private void provisionGame(Boolean rerun) {
+	private void provisionGame() {
 		state = "waitForOtherStart";
 		stateLbl.setText("waiting for your opponent to show up");
 		outcomeLbl.setVisible(false);
 		prepareButtons();
+		consumer.setSource("0");
+		inGame = false;
+		consumer.setInGame(inGame);
 		
-		if(!rerun) {
-			producer.sendQueueMessage("start");
+		//if(!rerun) {
+			producer.sendQueueMessage("start",inGame);
 			sentTimestamp = new java.util.Date().getTime();
-		}
+		//}
 	}
 	
 	private void prepareButtons() {		
@@ -120,7 +124,7 @@ public class TickTackToeController {
 	private void sendMove(Integer buttonNumber) {
 		
 		if(state.equals("myMove") && buttons[buttonNumber].getText().equals("")) {
-			producer.sendQueueMessage("btn"+buttonNumber);
+			producer.sendQueueMessage("btn"+buttonNumber,inGame);
 			state = "hisMove";
 			stateLbl.setText("wait for your opponent's move");
 			lightUpButton(buttonNumber,symbol);
@@ -206,7 +210,7 @@ public class TickTackToeController {
 		prepareButtons();
 	}
 	
-	private void reactToMessage(long timestamp, String text) {
+	private void reactToMessage(long timestamp, String text, String sender) {
 		System.out.println("Got message \""+text+"\" at: "+String.valueOf(timestamp));
 		System.out.println("State: "+ state);
 		
@@ -215,7 +219,7 @@ public class TickTackToeController {
 			alert.setHeaderText("Information");
 			alert.setContentText("Your opponent has quit the game. Ready to play against another player.");
 			alert.showAndWait();
-			provisionGame(true);
+			provisionGame();
 			return;
 		}
 		
@@ -225,21 +229,32 @@ public class TickTackToeController {
 		}
 		
 		if(state.equals("waitForOtherStart") && text.equals("start")) {
-			if(timestamp < sentTimestamp) {
+			if(timestamp > sentTimestamp) {
 				state = "hisMove";
 				symbol = "O";
 				otherSymbol = "X";
 				stateLbl.setText("wait for opponent's move");
-			}
-			else {
-				state = "myMove";
-				symbol = "X";
-				otherSymbol = "O";
-				stateLbl.setText("your move");
-			}
-			symbolLbl.setText(symbol);
-			producer.sendQueueMessage("start");
+				
+				consumer.setSource(sender);
+				
+				producer.sendQueueMessage("startConfirm",inGame);
+				
+				inGame = true;
+				consumer.setInGame(inGame);
+				symbolLbl.setText(symbol);
+			}			
 			return;
+		}
+		if(state.equals("waitForOtherStart") && text.equals("startConfirm")) {
+			consumer.setSource(sender);
+			inGame = true;
+			consumer.setInGame(inGame);
+			
+			state = "myMove";
+			symbol = "X";
+			otherSymbol = "O";
+			stateLbl.setText("your move");
+			symbolLbl.setText(symbol);
 		}
 		
 		if(state.equals("hisMove") && text.substring(0, 3).equals("btn"))
@@ -256,7 +271,7 @@ public class TickTackToeController {
 		PTPSyncConsumer cleaner = new PTPSyncConsumer(); //clean up unnecessary messages
 		cleaner.receiveQueueMessages();
 		
-		if(!state.equals("waitForOtherStart")) { producer.sendQueueMessage("leaving"); }
+		if(!state.equals("waitForOtherStart")) { producer.sendQueueMessage("leaving",inGame); }
 		consumer.finishReceiving();
 		
 		System.out.println("Consumer closed");
@@ -268,7 +283,7 @@ public class TickTackToeController {
 		public void onMessage(Message message) {
 				Platform.runLater(() -> {
 					try {
-						reactToMessage(message.getLongProperty("TIME"),message.getStringProperty("TEXT"));
+						reactToMessage(message.getLongProperty("TIME"),message.getStringProperty("TEXT"),message.getStringProperty("HASH"));
 					} catch (JMSException e) {
 						e.printStackTrace();
 					}
