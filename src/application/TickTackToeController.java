@@ -35,7 +35,7 @@ public class TickTackToeController {
 	private long sentTimestamp;
 	private Boolean inGame = false;
 	
-	private String state = "waitForOtherStart"; //waitForOtherStart || myMove || hisMove || won || lost
+	private String state = "waitForOtherStart"; //waitForOtherStart || myMove || hisMove || won || lost || draw
 	private String symbol = "X";
 	private String otherSymbol = "O";
 	
@@ -60,7 +60,7 @@ public class TickTackToeController {
 	
 	@FXML private void restartBtn_Click() {
 		producer.sendQueueMessage("restart",inGame);
-		restartGame();
+		restartGame(false);
 	}
 	
 	@FXML private void btn0_Click() {
@@ -119,6 +119,7 @@ public class TickTackToeController {
 			b.setText("");
 		}
 		restartBtn.setVisible(false);
+		litButtonsCount = 0;
 	}
 	
 	private void sendMove(Integer buttonNumber) {
@@ -194,14 +195,22 @@ public class TickTackToeController {
 			outcomeLbl.setVisible(true);
 			restartBtn.setVisible(true);
 		}
+		
+		if(litButtonsCount >= 9 && (state.equals("myMove") || state.equals("hisMove"))) { //draw
+			state = "draw";
+			stateLbl.setText("game finished");
+			outcomeLbl.setText("Ended in a draw!");
+			outcomeLbl.setVisible(true);
+			restartBtn.setVisible(true);
+		}
 	}
 	
-	private void restartGame() {
-		if(state.equals("won")) {
+	private void restartGame(Boolean fromMessage) {
+		if(state.equals("won") || (state.equals("draw") && fromMessage)) {
 			state = "hisMove";
 			stateLbl.setText("wait for opponent's move");
 		}
-		else if(state.equals("lost")) {
+		else if(state.equals("lost") || (state.equals("draw") && !fromMessage)) {
 			state = "myMove";
 			stateLbl.setText("your move");
 		}
@@ -223,8 +232,8 @@ public class TickTackToeController {
 			return;
 		}
 		
-		if((state.equals("lost") || state.equals("won")) && text.equals("restart")) {
-			restartGame();
+		if((state.equals("lost") || state.equals("won") || state.equals("draw")) && text.equals("restart")) {
+			restartGame(true);
 			return;
 		}
 		
